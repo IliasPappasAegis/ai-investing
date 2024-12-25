@@ -74,14 +74,48 @@
         .buy {
             color: green;
             font-weight: bold;
+            cursor: pointer;
         }
         .sell {
             color: red;
             font-weight: bold;
+            cursor: pointer;
         }
         .hold {
             color: orange;
             font-weight: bold;
+            cursor: pointer;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding-top: 50px;
+        }
+        .modal-content {
+            background-color: white;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            border-radius: 8px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: black;
+            text-decoration: none;
         }
     </style>
 </head>
@@ -103,12 +137,23 @@
                         <th class="sortable" data-column="percent_change">24h Change</th>
                         <th class="sortable" data-column="expected_ath">Expected ATH</th>
                         <th class="sortable" data-column="recommendation">Recommendation</th>
+                        <th>Why</th>
                     </tr>
                 </thead>
                 <tbody id="crypto-list">
                     <!-- Crypto data will be dynamically generated -->
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <div id="analysisModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h3>Analysis Table</h3>
+            <div id="analysisContent">
+                <!-- Analysis details will be dynamically populated -->
+            </div>
         </div>
     </div>
 
@@ -138,7 +183,8 @@
                     volatility: Math.abs(parseFloat(coin.quote.USD.percent_change_24h)).toFixed(2),
                     percent_change: parseFloat(coin.quote.USD.percent_change_24h).toFixed(2),
                     expected_ath: calculateExpectedATH(parseFloat(coin.quote.USD.price)),
-                    recommendation: analyzeCrypto(parseFloat(coin.quote.USD.percent_change_24h))
+                    recommendation: analyzeCrypto(parseFloat(coin.quote.USD.percent_change_24h)),
+                    why: generateWhyReason(parseFloat(coin.quote.USD.percent_change_24h))
                 }));
                 displayCryptoData(cryptoData);
             } catch (error) {
@@ -159,7 +205,8 @@
                         <td>${coin.volatility}%</td>
                         <td>${coin.percent_change}%</td>
                         <td>${coin.expected_ath}</td>
-                        <td class="${coin.recommendation.toLowerCase()}">${coin.recommendation}</td>
+                        <td class="${coin.recommendation.toLowerCase()}" onclick="showAnalysis('${coin.name}', '${coin.recommendation}')">${coin.recommendation}</td>
+                        <td>${coin.why}</td>
                     </tr>
                 `;
             });
@@ -172,6 +219,16 @@
                 return 'Sell';
             } else {
                 return 'Hold';
+            }
+        }
+
+        function generateWhyReason(percentChange) {
+            if (percentChange > 5) {
+                return 'Strong growth potential';
+            } else if (percentChange < -5) {
+                return 'Significant downward trend';
+            } else {
+                return 'Stable with minor fluctuations';
             }
         }
 
@@ -192,35 +249,23 @@
             });
         }
 
-        function sortTable(column, order) {
-            const sortedData = [...cryptoData].sort((a, b) => {
-                let aValue = a[column];
-                let bValue = b[column];
+        function showAnalysis(name, recommendation) {
+            const modal = document.getElementById('analysisModal');
+            const analysisContent = document.getElementById('analysisContent');
 
-                if (typeof aValue === 'string') {
-                    aValue = aValue.toLowerCase();
-                    bValue = bValue.toLowerCase();
-                }
+            analysisContent.innerHTML = `
+                <p><strong>Coin:</strong> ${name}</p>
+                <p><strong>Recommendation:</strong> ${recommendation}</p>
+                <p><strong>Details:</strong> Analysis based on historical trends and price fluctuations will go here.</p>
+            `;
 
-                return order === 'asc'
-                    ? aValue > bValue ? 1 : -1
-                    : aValue < bValue ? 1 : -1;
-            });
-
-            displayCryptoData(sortedData);
+            modal.style.display = 'block';
         }
 
-        document.querySelectorAll('.sortable').forEach(header => {
-            header.addEventListener('click', () => {
-                const column = header.getAttribute('data-column');
-                const currentOrder = header.classList.contains('asc') ? 'desc' : 'asc';
-
-                document.querySelectorAll('.sortable').forEach(h => h.classList.remove('asc', 'desc'));
-                header.classList.add(currentOrder);
-
-                sortTable(column, currentOrder);
-            });
-        });
+        function closeModal() {
+            const modal = document.getElementById('analysisModal');
+            modal.style.display = 'none';
+        }
 
         fetchCryptoData();
     </script>
